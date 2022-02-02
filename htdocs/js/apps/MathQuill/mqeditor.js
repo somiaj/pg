@@ -29,7 +29,10 @@ window.answerQuills = {};
 			restrictMismatchedBrackets: true,
 			sumStartsWithNEquals: true,
 			supSubsRequireOperand: true,
-			autoCommands: 'pi sqrt root vert inf union abs',
+			autoCommands: 'Gamma Delta Theta Lambda Xi Pi Sigma Phi Psi Omega'
+					+ 'alpha beta gamma delta epsilon zeta eta theta iota kappa'
+					+ 'lambda mu nu xi pi rho sigma tau upsilon phi chi psi omega'
+					+ 'sqrt root vert inf union abs',
 			rootsAreExponents: true,
 			maxDepth: 10
 		};
