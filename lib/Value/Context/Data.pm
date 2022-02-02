@@ -111,7 +111,7 @@ sub add {
   my $data = $self->{context}{$self->{dataName}};
   foreach my $x (keys %D) {
     Value::Error("Illegal %s name '%s'",$self->{name},$x) unless $x =~ m/^$self->{namePattern}$/;
-    warn "$self->{Name} '$x' already exists" if defined($data->{$x});
+    warn "$self->{Name} '$x' already exists" if defined($data->{$x}) && ! $data->{$x}->{autoGen};
     if ($data->{$x}) {
       delete $self->{tokens}{$x};
       delete $self->{patterns}{Parser::Context::protectRegexp($x)};
@@ -123,6 +123,8 @@ sub add {
       my $alias = $data->{$x}{alias};
       Value::Error("Alias '%s' doesn't exist for %s '%s'",$alias,$self->{name},$x)
           if !(defined($data->{$alias}) || defined($D{$alias}));
+    } elsif (ref($data->{$x}) eq 'HASH' && $data->{$x}{formatGreek}) {
+      $self->formatGreekLetters($x);
     }
   }
   $self->update;
@@ -274,6 +276,69 @@ sub names {
 sub all {
   my $self = shift;
   $self->{context}{$self->{dataName}};
+}
+
+#
+#  Add TeX and unicode alternatives to Greek letters
+#
+sub formatGreekLetters {
+  my $self = shift; my $name = shift;
+  my $data = $self->{context}{$self->{dataName}};
+  my $def = $data->{$name};
+
+  # Using greek letters defined by the AMS
+  # http://www.ams.org/STIX/ion/stixsig03.html
+  my $greekLetters = {
+    'Gamma'   => { TeX => '\Gamma ',      alternatives => ["\x{0393}"] },
+    'Delta'   => { TeX => '\Delta ',      alternatives => ["\x{0394}"] },
+    'Theta'   => { TeX => '\Theta ',      alternatives => ["\x{0398}"] },
+    'Lambda'  => { TeX => '\Lambda ',     alternatives => ["\x{039B}"] },
+    'Xi'      => { TeX => '\Xi ',         alternatives => ["\x{039E}"] },
+    'Pi'      => { TeX => '\Pi ',         alternatives => ["\x{03A0}"] },
+    'Sigma'   => { TeX => '\Sigma ',      alternatives => ["\x{03A3}"] },
+    'Phi'     => { TeX => '\Phi ',        alternatives => ["\x{03A6}"] },
+    'Psi'     => { TeX => '\Psi ',        alternatives => ["\x{03A8}"] },
+    'Omega'   => { TeX => '\Omega ',      alternatives => ["\x{03A9}"] },
+
+    'alpha'   => { TeX => '\alpha ',      alternatives => ["\x{03B1}"] },
+    'beta'    => { TeX => '\beta ',       alternatives => ["\x{03B2}"] },
+    'gamma'   => { TeX => '\gamma ',      alternatives => ["\x{03B3}"] },
+    'delta'   => { TeX => '\delta '   ,   alternatives => ["\x{03B4}"] },
+    'epsilon' => { TeX => '\varepsilon ', alternatives => ["\x{03B5}"] },
+    'zeta'    => { TeX => '\zeta ',       alternatives => ["\x{03B6}"] },
+    'eta'     => { TeX => '\eta ',        alternatives => ["\x{03B7}"] },
+    'theta'   => { TeX => '\theta ',      alternatives => ["\x{03B8}"] },
+    'iota'    => { TeX => '\iota ',       alternatives => ["\x{03B9}"] },
+    'kappa'   => { TeX => '\kappa ',      alternatives => ["\x{03BA}"] },
+    'lambda'  => { TeX => '\lambda ',     alternatives => ["\x{03BB}"] },
+    'mu'      => { TeX => '\mu ',         alternatives => ["\x{03BC}"] },
+    'nu'      => { TeX => '\nu ',         alternatives => ["\x{03BD}"] },
+    'xi'      => { TeX => '\xi ',         alternatives => ["\x{03BE}"] },
+    'pi'      => { TeX => '\pi ',         alternatives => ["\x{03C0}"] },
+    'rho'     => { TeX => '\rho ',        alternatives => ["\x{03C1}"] },
+    'sigma'   => { TeX => '\sigma ',      alternatives => ["\x{03C3}"] },
+    'tau'     => { TeX => '\tau ',        alternatives => ["\x{03C4}"] },
+    'upsilon' => { TeX => '\upsilon ',    alternatives => ["\x{03C5}"] },
+    'phi'     => { TeX => '\phi ',        alternatives => ["\x{03C6}"] },
+    'chi'     => { TeX => '\chi ',        alternatives => ["\x{03C7}"] },
+    'psi'     => { TeX => '\psi ',        alternatives => ["\x{03C8}"] },
+    'omega'   => { TeX => '\omega ',      alternatives => ["\x{03C9}"] },
+  };
+
+  if ($greekLetters->{$name}) {
+    $def->{TeX} = $greekLetters->{$name}->{TeX} if ! $def->{TeX};
+    foreach my $alt (@{$greekLetters->{$name}{alternatives}}) {
+      if (! defined($data->{$alt})) {
+        # Currently only used for variables and constants.
+        if ($self->{dataName} eq 'variables') {
+          $self->add($alt => [$def->{type}, alias => $name]);
+        } elsif ($self->{dataName} eq 'constants') {
+          $self->add($alt => { alias => $name });
+        }
+        $data->{$alt}{autoGen} = 1 if $data->{$alt}; # Allow overwrite without warnings.
+      }
+    }
+  }
 }
 
 #########################################################################

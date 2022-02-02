@@ -20,8 +20,9 @@ sub init {
 #
 sub create {
   my $self = shift; my $value = shift;
-  return {value => $value, keepName => 1} unless ref($value) eq 'HASH';
+  return {value => $value, keepName => 1, formatGreek => 1} unless ref($value) eq 'HASH';
   $value->{keepName} = 1 unless defined($value->{keepName});
+  $value->{formatGreek} = 1 unless defined($value->{formatGreek});
   return $value;
 }
 sub uncreate {shift; (shift)->{value}}

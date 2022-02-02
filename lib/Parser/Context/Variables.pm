@@ -52,7 +52,7 @@ sub create {
   } else {
     Value::Error("Unrecognized variable type '%s'",$value);
   }
-  return {type => $value, @extra};
+  return {type => $value, formatGreek => 1, @extra};
 }
 sub uncreate {shift; (shift)->{type}};
 
