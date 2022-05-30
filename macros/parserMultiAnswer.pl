@@ -278,7 +278,7 @@ sub single_check {
   my $score = 0; my (@errors,@student,@latex,@text);
   my $i = 0; my $nonblank = 0;
   if ($self->perform_check($ans)) {
-    push(@errors,'<TR><TD STYLE="text-align:left" COLSPAN="2">'.$self->{ans}[0]{ans_message}.'</TD></TR>');
+    push(@errors,'<TR><TD STYLE="text-align: center;" COLSPAN="2">'.$self->{ans}[0]{ans_message}.'</TD></TR>');
     $self->{ans}[0]{ans_message} = "";
   }
   foreach my $result (@{$self->{ans}}) {
@@ -297,7 +297,7 @@ sub single_check {
   $ans->{ans_message} = $ans->{error_message} = "";
   if (scalar(@errors)) {
     $ans->{ans_message} = $ans->{error_message} =
-      '<TABLE BORDER="0" CELLSPACING="0" CELLPADDING="0" CLASS="ArrayLayout">' .
+      '<TABLE BORDER="0" CELLSPACING="0" CELLPADDING="0" CLASS="ArrayLayout mx-auto">' .
        join('<TR><TD HEIGHT="4"></TD></TR>',@errors).
       '</TABLE>';
   }
