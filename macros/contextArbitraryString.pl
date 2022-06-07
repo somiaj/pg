@@ -111,7 +111,7 @@ sub quoteTeX {
 sub quoteHTML {
   my $self = shift;
   my $s = $self->SUPER::quoteHTML(shift);
-  $s = "<pre style=\"text-align:left; padding-left:.2em\">$s</pre>"
+  $s = "<pre class='mb-0'>$s</pre>"
     unless ($main::displayMode eq "TeX" or $main::displayMode eq "PTX");
   return $s;
 }
