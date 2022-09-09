@@ -702,6 +702,13 @@ sub Value::Union::D {
 
 sub Parser::Variable::D {
   my $self = shift; my $x = shift;
+  return $self->Item("List")->new(
+      $self->{equation},
+      [map { $self->Item("Number")->new($self->{equation},0) } 1..$self->length],
+      1,
+      $self->{equation}{context}{parens}{'<'},
+      $self->{type}{entryType},'<','>')
+   if ($self->type eq 'Vector' && $self->{name} ne $x);
   my $d = ($self->{name} eq $x)? 1: 0;
   return $self->Item("Number")->new($self->{equation},$d);
 }
