@@ -169,6 +169,9 @@ These functions translate from real world to pixel coordinates.
 package WWPlot;
 
 use strict;
+use warnings;
+
+use GD;
 
 #use Exporter;
 #use DynaLoader;
