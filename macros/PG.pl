@@ -1,6 +1,6 @@
 ################################################################################
 # WeBWorK Online Homework Delivery System
-# Copyright &copy; 2000-2023 The WeBWorK Project, https://github.com/openwebwork
+# Copyright &copy; 2000-2024 The WeBWorK Project, https://github.com/openwebwork
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of either: (a) the GNU General Public License as published by the
@@ -817,12 +817,12 @@ The options that can be modified are as follows.
 =item *
 
 C<resultTitle>: This is the title that is displayed in the feedback popover for
-the answers in the response group. By default this is "Preview", "Correct",
-"Incorrect", or "n% correct", depending on the status of the answer and the type
-of submission. Those strings are translated via C<maketext>. Usually this should
-not be changed, but in some cases the default status titles are not appropriate
-for certain types of answers. For example, the L<PGessaymacros.pl> macros
-changes this to "Ungraded" for essay answers.
+the answers in the response group. By default this is "Answer Preview",
+"Correct", "Incorrect", or "n% correct", depending on the status of the answer
+and the type of submission. Those strings are translated via C<maketext>.
+Usually this should not be changed, but in some cases the default status titles
+are not appropriate for certain types of answers. For example, the
+L<PGessaymacros.pl> macros changes this to "Ungraded" for essay answers.
 
 =item *
 
@@ -840,7 +840,7 @@ depending on the status of the answer and the type of submission.
 =item *
 
 C<btnAddClass>: This is a string containing additional space separated CSS
-classes to add to the feedback button. This is "ms-1" by default. Macros can
+classes to add to the feedback button. This is "ms-2" by default. Macros can
 change this to affect positioning of the button. This generally should not be
 used to change the appearance of the button.
 
@@ -1027,6 +1027,14 @@ sub ENDDOCUMENT {
 
 			my @answerNames = keys %{ $PG->{PG_ANSWERS_HASH} };
 
+			my $showCorrectOnly =
+				$rh_envir->{showCorrectAnswers}
+				&& $rh_envir->{forceScaffoldsOpen}
+				&& $rh_envir->{forceShowAttemptResults}
+				&& !$rh_envir->{showAttemptAnswers}
+				&& !$rh_envir->{showAttemptPreviews}
+				&& !$rh_envir->{showMessages};
+
 			for my $answerLabel (@answerNames) {
 				my $response_obj = $PG->{PG_ANSWERS_HASH}{$answerLabel}->response_obj;
 				my $ansHash      = $PG->{PG_ANSWERS_HASH}{$answerLabel}{ans_eval}{rh_ans};
@@ -1034,10 +1042,10 @@ sub ENDDOCUMENT {
 				my $answerScore = $ansHash->{score} // 0;
 
 				my %options = (
-					resultTitle      => maketext('Preview'),
+					resultTitle      => maketext('Answer Preview'),
 					resultClass      => '',
 					btnClass         => 'btn-info',
-					btnAddClass      => 'ms-1',
+					btnAddClass      => 'ms-2',
 					feedbackElements => Mojo::Collection->new,
 					insertElement    => undef,
 					insertMethod     => 'append',    # Can be append, append_content, prepend, or prepend_content.
@@ -1072,11 +1080,12 @@ sub ENDDOCUMENT {
 					push(@{ $options{feedbackElements} }, @$elements);
 				}
 
-				my $showResults = ($rh_envir->{showAttemptResults} && $PG->{flags}{showPartialCorrectAnswers})
-					|| $rh_envir->{forceShowAttemptResults};
-
-				if ($showResults) {
-					if ($answerScore >= 1) {
+				if (($rh_envir->{showAttemptResults} && $PG->{flags}{showPartialCorrectAnswers})
+					|| $rh_envir->{forceShowAttemptResults})
+				{
+					if ($showCorrectOnly) {
+						$options{resultClass} = 'correct-only';
+					} elsif ($answerScore >= 1) {
 						$options{resultTitle} = maketext('Correct');
 						$options{resultClass} = 'correct';
 						$options{btnClass}    = 'btn-success';
@@ -1111,6 +1120,8 @@ sub ENDDOCUMENT {
 						|| $ansHash->{ans_message}
 						|| $rh_envir->{showCorrectAnswers});
 
+				next if $showCorrectOnly && !$options{showCorrect};
+
 				# Find an element to insert the button in or around if one has not been provided.
 				unless ($options{insertElement}) {
 					# Use the last feedback element by default.
@@ -1144,15 +1155,13 @@ sub ENDDOCUMENT {
 						if $options{insertElement} && $options{insertElement}->attr->{'data-feedback-insert-method'};
 				}
 
-				# Add the correct/incorrect/partially-correct class and
-				# aria-described by attribute to the feedback elements.
+				# Add the correct/incorrect/partially-correct class to the feedback elements.
 				for (@{ $options{feedbackElements} }) {
 					$_->attr(class => join(' ', $options{resultClass}, $_->attr->{class} || ()))
 						if $options{resultClass};
-					$_->attr('aria-describedby' => "ww-feedback-$answerLabel");
 				}
 
-				sub previewAnswer {
+				my $previewAnswer = sub {
 					my ($preview, $wrapPreviewInTex, $fallback) = @_;
 
 					return $fallback unless defined $preview && $preview =~ /\S/;
@@ -1165,9 +1174,9 @@ sub ENDDOCUMENT {
 						return Mojo::DOM->new_tag('script', type => 'math/tex; mode=display', sub {$preview})
 							->to_string;
 					}
-				}
+				};
 
-				sub feedbackLine {
+				my $feedbackLine = sub {
 					my ($title, $line, $class) = @_;
 					$class //= '';
 					return '' unless defined $line && $line =~ /\S/;
@@ -1180,62 +1189,68 @@ sub ENDDOCUMENT {
 							)
 						: ''
 					) . Mojo::DOM->new_tag('div', class => "card-body text-center $class", sub {$line});
-				}
+				};
 
-				my $answerPreview = previewAnswer($ansHash->{preview_latex_string}, $options{wrapPreviewInTex});
+				my $answerPreview = $previewAnswer->($ansHash->{preview_latex_string}, $options{wrapPreviewInTex});
 
-				# Create the screen reader only span holding the aria description, create the feedback button and
-				# popover, and insert the button at the requested location.
-				my $feedback = (
-					# Add a visually hidden span to provide feedback to screen reader users immediately.
-					$showResults || ($rh_envir->{showMessages} && $ansHash->{ans_message})
-					? Mojo::DOM->new_tag(
-						'span',
-						class => 'visually-hidden',
-						id    => "ww-feedback-$answerLabel",
-						sub {
-							($showResults ? Mojo::DOM->new_tag('span', $options{resultTitle}) : '')
-								. ($rh_envir->{showMessages} && $ansHash->{ans_message}
-									? Mojo::DOM->new_tag('span', $ansHash->{ans_message})
-									: '');
-						}
-						)->to_string
-					: ''
-					)
-					. Mojo::DOM->new_tag(
-						'button',
-						type  => 'button',
-						class => "ww-feedback-btn btn btn-sm $options{btnClass} $options{btnAddClass}"
+				# Create the feedback button and popover, and insert the button at the requested location.
+				my $feedback = Mojo::DOM->new_tag(
+					'button',
+					type  => 'button',
+					class => "ww-feedback-btn btn btn-sm $options{btnClass} $options{btnAddClass}"
 						. ($rh_envir->{showMessages} && $ansHash->{ans_message} ? ' with-message' : ''),
-						'aria-label' => $options{resultTitle},
-						data         => {
-							bs_title               => $options{resultTitle},
-							bs_toggle              => 'popover',
-							bs_trigger             => 'click',
-							bs_placement           => 'bottom',
-							bs_html                => 'true',
-							bs_custom_class        => join(' ', 'ww-feedback-popover', $options{resultClass} || ()),
-							bs_fallback_placements => '[]',
-							bs_content             => Mojo::DOM->new_tag(
+					'aria-label' => (
+						$rh_envir->{showMessages} && $ansHash->{ans_message}
+						? maketext('[_1] with message', $options{resultTitle})
+						: $options{resultTitle}
+					),
+					data => {
+						$showCorrectOnly ? (show_correct_only => 1) : (
+							bs_title => Mojo::DOM->new_tag(
 								'div',
-								id => "$answerLabel-feedback",
+								class           => 'd-flex align-items-center justify-content-between',
+								'data-bs-theme' => 'dark',
 								sub {
-									Mojo::DOM->new_tag(
-										'div',
-										class => 'card',
-										sub {
-											(
-												$rh_envir->{showMessages} && $ansHash->{ans_message}
-												? feedbackLine('', $ansHash->{ans_message} =~ s/\n/<br>/gr,
-													'feedback-message')
-												: ''
+									Mojo::DOM->new_tag('span', style => 'width:20.4px')
+										. Mojo::DOM->new_tag('span', class => 'mx-3', $options{resultTitle})
+										. Mojo::DOM->new_tag(
+											'button',
+											type         => 'button',
+											class        => 'btn-close',
+											'aria-label' => maketext('Close')
+										);
+								}
+							)->to_string
+						),
+						answer_label           => $answerLabel,
+						bs_toggle              => 'popover',
+						bs_trigger             => 'click',
+						bs_placement           => $showCorrectOnly ? 'right' : 'bottom',
+						bs_html                => 'true',
+						bs_custom_class        => join(' ', 'ww-feedback-popover', $options{resultClass} || ()),
+						bs_fallback_placements => $showCorrectOnly ? '["left","top","bottom"]' : '[]',
+						bs_content             => Mojo::DOM->new_tag(
+							'div',
+							id => "$answerLabel-feedback",
+							sub {
+								Mojo::DOM->new_tag(
+									'div',
+									class => 'card',
+									sub {
+										(
+											$rh_envir->{showMessages} && $ansHash->{ans_message}
+											? $feedbackLine->(
+												'', $ansHash->{ans_message} =~ s/\n/<br>/gr,
+												'feedback-message'
+												)
+											: ''
 											)
 											. ($rh_envir->{showAttemptAnswers} && $options{showEntered}
-												? feedbackLine(maketext('You Entered'), $ansHash->{student_ans})
+												? $feedbackLine->(maketext('You Entered'), $ansHash->{student_ans})
 												: '')
 											. (
 												$rh_envir->{showAttemptPreviews} && $options{showPreview}
-												? feedbackLine(
+												? $feedbackLine->(
 													maketext('Preview of Your Answer'),
 													(
 														(defined $answerPreview && $answerPreview =~ /\S/)
@@ -1249,15 +1264,32 @@ sub ENDDOCUMENT {
 											. (
 												$rh_envir->{showCorrectAnswers} && $options{showCorrect}
 												? do {
-													my $correctAnswer = previewAnswer(
+													my $correctAnswer = $previewAnswer->(
 														$ansHash->{correct_ans_latex_string},
 														$options{wrapPreviewInTex},
 														$ansHash->{correct_ans}
 													);
-													feedbackLine(
+													$showCorrectOnly
+													? $feedbackLine->(
+														'',
+														Mojo::DOM->new_tag(
+															'div',
+															class =>
+															'd-flex justify-content-between align-items-center gap-1',
+															sub {
+																$correctAnswer
+																. Mojo::DOM->new_tag(
+																	'button',
+																	type         => 'button',
+																	class        => 'btn-close',
+																	'aria-label' => maketext('Close')
+																);
+															}
+														)
+													)
+													: $feedbackLine->(
 														maketext('Correct Answer'),
-														$rh_envir->{showCorrectAnswers} > 1
-														? $correctAnswer
+														$rh_envir->{showCorrectAnswers} > 1 ? $correctAnswer
 														: Mojo::DOM->new_tag(
 															'button',
 															type  => 'button',
@@ -1273,12 +1305,12 @@ sub ENDDOCUMENT {
 												}
 												: ''
 											);
-										}
-									);
-								}
+									}
+								);
+							}
 						)->to_string,
-						},
-						sub { Mojo::DOM->new_tag('i', class => $options{resultClass}) }
+					},
+					sub { Mojo::DOM->new_tag('i', class => $options{resultClass}) }
 				)->to_string;
 
 				if ($options{insertElement} && $options{insertElement}->can($options{insertMethod})) {
@@ -1483,11 +1515,13 @@ sub ENDDOCUMENT {
 }
 
 sub alias {
-	$PG->{PG_alias}->make_alias(@_);
+	my $aux_file_id = shift;
+	return $PG->{PG_alias}->make_alias($aux_file_id);
 }
 
 sub get_resource {
-	$PG->{PG_alias}->get_resource(@_);
+	my $aux_file_id = shift;
+	return $PG->{PG_alias}->get_resource($aux_file_id);
 }
 
 sub maketext {
@@ -1499,20 +1533,16 @@ sub insertGraph {
 }
 
 sub findMacroFile {
-	$PG->{PG_alias}->findMacroFile(@_);
-}
-
-sub findAppletCodebase {
-	my $appletName = shift;
-	my $url        = eval { $PG->{PG_alias}->findAppletCodebase($appletName) };
-	# warn is already trapped under the old system
-	$PG->warning_message("While using findAppletCodebase  to search for applet$appletName:  $@") if $@;
-	$url;
+	$PG->{PG_loadMacros}->findMacroFile(@_);
 }
 
 sub loadMacros {
 	$PG->{PG_loadMacros}->loadMacros(@_);
 }
+
+# This is a stub for deprecated problems that call this method.  Some of the GeoGebra
+# problems that do so actually work even though this method does nothing.
+sub findAppletCodebase { return ''; }
 
 ## Problem Grader Subroutines
 

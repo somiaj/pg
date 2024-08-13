@@ -1,5 +1,5 @@
 /* WeBWorK Online Homework Delivery System
- * Copyright &copy; 2000-2023 The WeBWorK Project, https://github.com/openwebwork
+ * Copyright &copy; 2000-2024 The WeBWorK Project, https://github.com/openwebwork
  *
  * This program is free software; you can redistribute it and/or modify it under
  * the terms of either: (a) the GNU General Public License as published by the
@@ -73,21 +73,27 @@
 	span[id^='mq-answer'],
 	.graphtool-container {
 		&.correct:not(:focus):not(.mq-focused) {
-			border-color: rgba(81, 153, 81, 1); /* green */
+			border-color: rgba(81, 153, 81, 0.8); /* green */
 			outline: 0;
-			box-shadow: inset 0 0 2px 1px rgba(0, 0, 0, 0.25), 0 0 8px 2px rgba(81, 153, 81, 1);
+			box-shadow:
+				inset 0 0 2px 1px rgba(0, 0, 0, 0.25),
+				0 0 0 0.2rem rgba(81, 153, 81, 0.5);
 		}
 
 		&.incorrect:not(:focus):not(.mq-focused) {
-			border-color: rgba(191, 84, 84, 1); /* red */
+			border-color: rgba(191, 84, 84, 0.8); /* red */
 			outline: 0;
-			box-shadow: inset 0 0 2px 1px rgba(0, 0, 0, 0.25), 0 0 8px 2px rgba(191, 84, 84, 1);
+			box-shadow:
+				inset 0 0 2px 1px rgba(0, 0, 0, 0.25),
+				0 0 0 0.2rem rgba(191, 84, 84, 0.5);
 		}
 
 		&.partially-correct:not(:focus):not(.mq-focused) {
 			border-color: rgba(255, 193, 7, 1); /* yellow */
 			outline: 0;
-			box-shadow: inset 0 0 2px 1px rgba(0, 0, 0, 0.25), 0 0 8px 2px rgba(255, 193, 7, 1);
+			box-shadow:
+				inset 0 0 2px 1px rgba(0, 0, 0, 0.25),
+				0 0 0 0.2rem rgba(255, 193, 7, 0.8);
 		}
 	}
 
@@ -110,12 +116,15 @@
 
 	input[type='text'],
 	input[type='radio'],
+	input[type='checkbox'],
 	textarea,
 	select {
 		&:focus {
-			border-color: rgba(82, 168, 236, 0.8);
+			border-color: rgba(112, 154, 192, 0.8);
 			outline: 0;
-			box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075), 0 0 8px 2px rgba(82, 168, 236, 0.6);
+			box-shadow:
+				inset 0 1px 1px rgba(0, 0, 0, 0.25),
+				0 0 0 0.2rem rgba(136, 187, 221, 0.8);
 		}
 	}
 
@@ -215,13 +224,18 @@
 	--bs-popover-max-width: 600px;
 	--bs-popover-zindex: 17;
 	position: absolute;
-	min-width: 200px;
 
 	.popover-header {
 		text-align: center;
 		cursor: pointer;
 		--bs-popover-header-bg: var(--bs-info);
 		--bs-popover-header-color: white;
+
+		.btn-close {
+			--bs-btn-close-opacity: 0.75;
+			--bs-btn-close-hover-opacity: 1;
+			--bs-btn-close-focus-shadow: 0 0 0 0.15rem #00000080;
+		}
 	}
 
 	&.correct {
@@ -245,11 +259,29 @@
 		}
 	}
 
+	&:not(.correct-only) {
+		min-width: 200px;
+
+		.popover-body {
+			.card {
+				border-top-left-radius: 0;
+				border-top-right-radius: 0;
+				--bs-card-spacer-y: 0.5rem;
+			}
+		}
+	}
+
+	&.correct-only {
+		.popover-body {
+			.card {
+				--bs-card-spacer-x: 0.25rem;
+				--bs-card-spacer-y: 0.25rem;
+			}
+		}
+	}
+
 	.popover-body {
 		.card {
-			border-top-left-radius: 0;
-			border-top-right-radius: 0;
-			--bs-card-spacer-y: 0.5rem;
 			--bs-card-cap-bg: #ddd;
 
 			.card-header {
@@ -291,7 +323,9 @@
 
 				&.resize-transition {
 					overflow: clip;
-					transition: max-height 1s ease-in, max-width 1s ease-in;
+					transition:
+						max-height 1s ease-in,
+						max-width 1s ease-in;
 				}
 
 				.fade-out {

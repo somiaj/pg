@@ -40,9 +40,9 @@
 			moveToFront();
 
 			// Make a click on the popover header close the popover.
-			feedbackPopover.tip
-				?.querySelector('.popover-header')
-				?.addEventListener('click', () => feedbackPopover.hide());
+			feedbackPopover.tip?.querySelector('.btn-close')?.addEventListener('click', () => feedbackPopover.hide());
+
+			if (feedbackPopover.tip) feedbackPopover.tip.dataset.iframeHeight = '1';
 
 			const revealCorrectBtn = feedbackPopover.tip?.querySelector('.reveal-correct-btn');
 			if (revealCorrectBtn && feedbackPopover.correctRevealed) {
@@ -66,6 +66,13 @@
 				});
 			}
 		});
+
+		if (feedbackBtn.dataset.showCorrectOnly) {
+			setTimeout(() => {
+				feedbackBtn.click();
+				setTimeout(() => feedbackPopover.update(), 100);
+			}, 0);
+		}
 	};
 
 	// Setup feedback popovers already on the page.

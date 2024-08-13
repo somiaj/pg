@@ -182,6 +182,7 @@ sub cmp_parse {
 			$self->cmp_diagnostics($ans);
 		}
 	} else {
+		$ans->{student_ans} = protectHTML($ans->{student_ans});
 		$self->cmp_collect($ans);
 		$self->cmp_error($ans);
 	}
@@ -337,8 +338,6 @@ sub cmp_error {
 			. protectHTML(substr($string, $s, $e - $s))
 			. '</SPAN>'
 			. protectHTML(substr($string, $e));
-	} else {
-		$ans->{student_ans} = protectHTML($ans->{student_ans});
 	}
 	$self->cmp_Error($ans, $message);
 }
@@ -1157,7 +1156,7 @@ sub ANS_MATRIX {
 	$def   = $self->context->lists->get('Matrix');
 	$open  = $self->{open}  || $def->{open};
 	$close = $self->{close} || $def->{close};
-	return $self->ans_matrix($extend, $name, $self->length, 1, $size, $open, $close, '',, '', %options)
+	return $self->ans_matrix($extend, $name, $self->length, 1, $size, $open, $close, '', '', %options)
 		if ($self->{ColumnVector});
 	$def   = $self->context->lists->get('Vector');
 	$open  = $self->{open}  || $def->{open};

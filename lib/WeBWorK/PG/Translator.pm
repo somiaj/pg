@@ -1,6 +1,6 @@
 ################################################################################
 # WeBWorK Online Homework Delivery System
-# Copyright &copy; 2000-2023 The WeBWorK Project, https://github.com/openwebwork
+# Copyright &copy; 2000-2024 The WeBWorK Project, https://github.com/openwebwork
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of either: (a) the GNU General Public License as published by the
@@ -71,43 +71,6 @@ use Mojo::DOM;
 use WWSafe;
 use PGUtil qw(pretty_print);
 use WeBWorK::PG::IO qw(fileFromPath);
-
-=head1 NAME
-
-WeBWorK::PG::Translator - Evaluate PG code and evaluate answers safely
-
-=head1 SYNPOSIS
-
-    my $pt = new WeBWorK::PG::Translator;    # create a translator
-    $pt->environment(\%envir);               # provide the environment variable for the problem
-    $pt->initialize();                       # initialize the translator
-    $pt-> set_mask();                        # set the operation mask for the translator safe compartment
-    $pt->source_string($source);             # provide the source string for the problem
-
-    # Load the unprotected macro files.
-    # These files are evaluated with the Safe compartment wide open.
-    # Other macros are loaded from within the problem using loadMacros.
-    $pt->unrestricted_load("${courseScriptsDirectory}PG.pl");
-
-    $pt->translate();    # translate the problem (the following pieces of information are created)
-
-    $PG_PROBLEM_TEXT_ARRAY_REF = $pt->ra_text();      # output text for the body of the HTML file (in array form)
-    $PG_PROBLEM_TEXT_REF = $pt->r_text();             # output text for the body of the HTML file
-    $PG_HEADER_TEXT_REF = $pt->r_header;              # text for the header of the HTML file
-    $PG_POST_HEADER_TEXT_REF = $pt->r_post_header
-    $PG_ANSWER_HASH_REF = $pt->rh_correct_answers;    # a hash of answer evaluators
-    $PG_FLAGS_REF = $pt->rh_flags;                    # misc. status flags.
-
-    $pt->process_answers;    # evaluates all of the answers
-
-    my $rh_answer_results = $pt->rh_evaluated_answers;  # provides a hash of the results of evaluating the answers.
-    my $rh_problem_result = $pt->grade_problem;         # grades the problem using the default problem grading method.
-
-=head1 DESCRIPTION
-
-This module defines an object which will translate a problem written in the Problem Generating (PG) language
-
-=cut
 
 BEGIN {
 	# Setup the safe compartment for the standalone renderer.
@@ -1209,8 +1172,8 @@ sub post_process_content {
 		warn "ERRORS from post processing PG text:\n$@\n" if $@;
 	} else {
 		$self->{safe}->share_from('main', [qw(%Mojo::Base:: %Mojo::Collection:: %Mojo::DOM::)]);
-		our $problemDOM = Mojo::DOM->new(${ $self->{PG_PROBLEM_TEXT_REF} });
-		$problemDOM->xml(1) if $self->{rh_pgcore}{displayMode} eq 'PTX';
+		our $problemDOM =
+			Mojo::DOM->new->xml($self->{rh_pgcore}{displayMode} eq 'PTX')->parse(${ $self->{PG_PROBLEM_TEXT_REF} });
 		our $pageHeader = Mojo::DOM->new(${ $self->{PG_HEADER_TEXT_REF} });
 		$self->{safe}->share('$problemDOM', '$pageHeader');
 		$self->{safe}->reval('for (@{ $main::PG->{content_post_processors} }) { $_->($problemDOM, $pageHeader); }', 1);

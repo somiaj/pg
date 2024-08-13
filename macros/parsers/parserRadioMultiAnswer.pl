@@ -1,6 +1,6 @@
 ################################################################################
 # WeBWorK Online Homework Delivery System
-# Copyright &copy; 2000-2023 The WeBWorK Project, https://github.com/openwebwork
+# Copyright &copy; 2000-2024 The WeBWorK Project, https://github.com/openwebwork
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of either: (a) the GNU General Public License as published by the
@@ -423,7 +423,22 @@ sub cmp {
 				my $contents = $selected->first->parent->at('div.radio-content[data-radio]');
 				if ($contents) {
 					my $partNames = JSON->new->decode($contents->attr('data-part-names'));
-					push(@$selected, $contents->at(qq{[name="$_"]})) for (@$partNames);
+					for (@$partNames) {
+						my $ansRules = $contents->find(qq{[name="$_"]});
+						if (@$ansRules > 1) {
+							# IF there is more than one input with this name, then this is a radio or checkbox answer
+							# group.  So only add the feedback class to the checked inputs if any are checked.
+							# Otherwise add the feedback class to all of them.
+							my $selectedParts = $ansRules->grep(sub { exists $_->attr->{checked} });
+							if (@$selectedParts > 0) {
+								push(@$selected, @$selectedParts);
+							} else {
+								push(@$selected, @$ansRules);
+							}
+						} else {
+							push(@$selected, @$ansRules);
+						}
+					}
 					$options->{feedbackElements} = $selected;
 				}
 			} else {
@@ -518,7 +533,8 @@ sub check_string {
 # supplied checker.
 sub perform_check {
 	my ($self, $rh_ans) = @_;
-	$self->context->clearError;
+	my $context = $self->context;
+	$context->clearError;
 	my @correct;
 	my @student;
 	# The answers for all parts are sent to the grader.  The answers in the incorrect parts from
@@ -550,8 +566,17 @@ sub perform_check {
 	$rh_ans->{isPreview} = $main::inputs_ref->{previewAnswers}
 		|| ($main::inputs_ref->{action} && $main::inputs_ref->{action} =~ m/^Preview/);
 	$self->{errorMessages} = [];
+
+	Parser::Context->current(undef, $context);    # change to the radio multi answers's context
+	my $flags  = Value::contextSet($context, $self->cmp_contextFlags($rh_ans));    # save old context flags
 	my $result = Value::cmp_compare([@correct], [@student], $self, $rh_ans);
-	if (!defined $result && $self->context->{error}{flag}) { $self->cmp_error($self->{ans}[0]); return 1; }
+	Value::contextSet($context, %{$flags});                                        # restore context values
+	$context->{answerHash} = undef;                                                # remove answerHash
+
+	if (!defined $result && $self->context->{error}{flag}) {
+		$self->appendMessage($self->context->{error}{message});
+		return 1;
+	}
 	if (Value::matchNumber($result)) {
 		$rh_ans->score($result);
 	} else {

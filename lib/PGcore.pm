@@ -1,6 +1,6 @@
 ################################################################################
 # WeBWorK Online Homework Delivery System
-# Copyright &copy; 2000-2023 The WeBWorK Project, https://github.com/openwebwork
+# Copyright &copy; 2000-2024 The WeBWorK Project, https://github.com/openwebwork
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of either: (a) the GNU General Public License as published by the
@@ -782,8 +782,7 @@ sub get_debug_messages {
 
 sub warning_message {
 	my ($self, @str) = @_;
-	# Mark the start of each message.
-	push @{ $self->{WARNING_messages} }, '------', @str;
+	push @{ $self->{WARNING_messages} }, @str;
 }
 
 sub get_warning_messages {

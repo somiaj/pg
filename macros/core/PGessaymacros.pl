@@ -1,6 +1,6 @@
 ################################################################################
 # WeBWorK Online Homework Delivery System
-# Copyright &copy; 2000-2023 The WeBWorK Project, https://github.com/openwebwork
+# Copyright &copy; 2000-2024 The WeBWorK Project, https://github.com/openwebwork
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of either: (a) the GNU General Public License as published by the
@@ -61,6 +61,7 @@ sub essay_cmp {
 			$options->{manuallyGraded} = 1;
 
 			if ($envir{needs_grading}
+				|| !defined $ansHash->{ans_label}
 				|| !defined $inputs_ref->{"previous_$ansHash->{ans_label}"}
 				|| $inputs_ref->{ $ansHash->{ans_label} } ne $inputs_ref->{"previous_$ansHash->{ans_label}"})
 			{
@@ -134,7 +135,7 @@ sub NAMED_ESSAY_BOX {
 			)
 			. tag(
 				'div',
-				class                        => 'latexentry-button-container d-flex gap-1 mt-1',
+				class                        => 'latexentry-button-container d-flex gap-2 mt-2',
 				id                           => "$name-latexentry-button-container",
 				data_feedback_insert_element => $name,
 				tag(
