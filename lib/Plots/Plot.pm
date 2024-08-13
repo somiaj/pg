@@ -23,17 +23,20 @@ See L<plots.pl> for more details.
 
 package Plots::Plot;
 
+use strict;
+use warnings;
+
 use Plots::Axes;
 use Plots::Data;
-use Plots::GD;
 use Plots::Tikz;
+use Plots::GD;
 
 sub new {
 	my ($class, $pg, @opts) = @_;
-	my $size  = $main::envir{onTheFlyImageSize} || 500;
+	my $size = $pg->{envir}{onTheFlyImageSize} || 500;
 
 	my $self = {
-		pg => $pg,
+		pg        => $pg,
 		imageName => {},
 		type      => 'Tikz',
 		ext       => 'svg',
@@ -158,7 +161,7 @@ sub image_type {
 # Tikz needs to use pdf for hardcopy generation.
 sub ext {
 	my $self = shift;
-	return 'pdf' if ($self->{type} eq 'Tikz' && $main::displayMode eq 'TeX');
+	return 'pdf' if ($self->{type} eq 'Tikz' && $self->{pg}{displayMode} eq 'TeX');
 	return $self->{ext};
 }
 
@@ -166,7 +169,7 @@ sub ext {
 # Set $plot->{tikzDebug} to 1 to just generate the tikzCode, and not create a graph.
 sub tikz_code {
 	my $self = shift;
-	return ($self->{tikzCode} && $main::displayMode =~ /HTML/) ? '<pre>' . $self->{tikzCode} . '</pre>' : '';
+	return ($self->{tikzCode} && $self->{pg}{displayMode} =~ /HTML/) ? '<pre>' . $self->{tikzCode} . '</pre>' : '';
 }
 
 # Add functions to the graph.

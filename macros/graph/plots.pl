@@ -410,4 +410,4 @@ BEGIN {
 
 sub _plots_init { }
 
-sub Plot { Plots::Plot->new($main::PG,@_); }
+sub Plot { Plots::Plot->new($main::PG, @_); }

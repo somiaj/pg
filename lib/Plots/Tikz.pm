@@ -21,8 +21,10 @@ See L<plots.pl> for more details.
 
 =cut
 
-
 package Plots::Tikz;
+
+use strict;
+use warnings;
 
 sub new {
 	my ($class, $pgplot) = @_;

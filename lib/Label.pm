@@ -42,6 +42,9 @@ This module defines labels for the graph objects (WWPlot).
 package Label;
 
 use strict;
+use warnings;
+
+use GD;
 
 #use Exporter;
 #use DynaLoader;
