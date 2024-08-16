@@ -1035,6 +1035,13 @@ sub ENDDOCUMENT {
 				&& !$rh_envir->{showAttemptPreviews}
 				&& !$rh_envir->{showMessages};
 
+			# Compute $numCorrect here, since we need to know if everything is correct when deciding
+			# to display correct feedback when $showPartialCorrectAnswers is false.
+			for my $answerLabel (@answerNames) {
+				my $answerScore = $PG->{PG_ANSWERS_HASH}{$answerLabel}{ans_eval}{rh_ans}{score} // 0;
+				++$numCorrect if $answerScore >= 1;
+			}
+
 			for my $answerLabel (@answerNames) {
 				my $response_obj = $PG->{PG_ANSWERS_HASH}{$answerLabel}->response_obj;
 				my $ansHash      = $PG->{PG_ANSWERS_HASH}{$answerLabel}{ans_eval}{rh_ans};
@@ -1080,8 +1087,13 @@ sub ENDDOCUMENT {
 					push(@{ $options{feedbackElements} }, @$elements);
 				}
 
-				if (($rh_envir->{showAttemptResults} && $PG->{flags}{showPartialCorrectAnswers})
-					|| $rh_envir->{forceShowAttemptResults})
+				if (
+					(
+						$rh_envir->{showAttemptResults}
+						&& ($PG->{flags}{showPartialCorrectAnswers} || $numCorrect == @answerNames)
+					)
+					|| $rh_envir->{forceShowAttemptResults}
+					)
 				{
 					if ($showCorrectOnly) {
 						$options{resultClass} = 'correct-only';
@@ -1107,7 +1119,6 @@ sub ENDDOCUMENT {
 				# Update the counts.  This should be after the custom feedback_options call as that method can change
 				# some of the options.  (The draggableProof.pl macro changes the answerGiven option, and the
 				# PGessaymacros.pl macro changes the manuallyGraded and needsGrading options.)
-				++$numCorrect        if $answerScore >= 1;
 				++$numManuallyGraded if $options{manuallyGraded};
 				$needsGrading = 1    if $options{needsGrading};
 				++$numBlank unless $options{manuallyGraded} || $options{answerGiven} || $answerScore >= 1;
