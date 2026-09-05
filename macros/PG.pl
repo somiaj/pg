@@ -147,6 +147,8 @@ sub DOCUMENT {
 	$inputs_ref->{problemSeed} = '';    #this version of the problemSeed is tainted. It can be set by a student
 	$inputs_ref->{displayMode} = '';    # not sure whether this should ever by used or not.
 
+	loadMacros('PGbasicmacros.pl', 'PGauxiliaryFunctions.pl');
+
 	load_css();
 	load_js();
 }
