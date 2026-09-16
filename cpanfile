@@ -17,6 +17,7 @@ on runtime => sub {
 	requires 'Locale::Maketext';
 	requires 'Locale::Maketext::Lexicon';
 	requires 'Mojolicious';
+	requires 'PPI';
 	requires 'Tie::IxHash';
 	requires 'Types::Serialiser';
 	requires 'UUID::Tiny';

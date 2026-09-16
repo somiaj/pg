@@ -51,6 +51,7 @@ binmode(STDOUT, ":encoding(UTF-8)");
 use Opcode;
 use Carp;
 use Mojo::DOM;
+use PPI ();
 
 use WWSafe;
 use PGUtil          qw(pretty_print);
@@ -716,11 +717,14 @@ sub translate {
 			: die PG_errorMessage('traceback', $_[0]);
 	};
 
-	# PG preprocessing code
+	# PG preprocessing code.
+	$evalString = &{ $self->{preprocess_code} }($evalString);
 	$evalString =
-		'BEGIN { my $eval = __FILE__; $main::envir{__files__}{$eval} = "'
+		'BEGIN { my $eval = __FILE__; $main::envir{loadMacrosCount} = '
+		. count_load_macros_calls($evalString)
+		. '; $main::envir{__files__}{$eval} = "'
 		. $self->{envir}{probFileName} . '" };'
-		. &{ $self->{preprocess_code} }($evalString);
+		. $evalString;
 
 	my ($PG_PROBLEM_TEXT_REF, $PG_HEADER_TEXT_REF, $PG_ANSWER_HASH_REF, $PG_FLAGS_REF, $PGcore) =
 		$safe_cmpt->reval($evalString);
@@ -1386,6 +1390,48 @@ sub default_preprocess_code {
 sub default_postprocess_code {
 	my $evalString_ref = shift;
 	return $evalString_ref;
+}
+
+=head2
+
+    count_load_macros_calls($problemSource);
+
+Uses C<PPI> to parse the C<$problemSource>, and only count the number of times
+C<loadMacros> is called. This uses C<is_function_call> to verify the string is
+not used as part a function call.
+
+=cut
+
+sub count_load_macros_calls {
+	my $source = shift;
+
+	my $ppiDoc = PPI::Document->new(\$source) or return 0;
+	my $tokens = $ppiDoc->find('PPI::Token::Word') || [];
+	return scalar grep { $_->content eq 'loadMacros' && is_function_call($_) } @$tokens;
+}
+
+# Determine whether a PPI::Token::Word is used as an actual function call.
+sub is_function_call {
+	my $token = shift;
+	return 0 unless ref($token) && $token->isa('PPI::Token::Word');
+
+	my $prev = $token->sprevious_sibling;
+	my $next = $token->snext_sibling;
+
+	# Subroutine declaration, or package/module declaration.
+	return 0 if $prev && $prev->isa('PPI::Token::Word') && $prev->content =~ /^(?:sub|package|use|require|no)$/;
+
+	# Fat-comma hash key (word => ...).
+	return 0 if $next && $next->isa('PPI::Token::Operator') && $next->content eq '=>';
+
+	# Bareword hash subscript: $hash{word}
+	unless ($next) {
+		my $parent = $token->parent;
+		$parent = $parent->parent if $parent && $parent->isa('PPI::Statement::Expression');
+		return 0 if $parent && $parent->isa('PPI::Structure::Subscript') && ($parent->braces // '') eq '{}';
+	}
+
+	return 1;
 }
 
 1;
