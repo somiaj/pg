@@ -716,11 +716,14 @@ sub translate {
 			: die PG_errorMessage('traceback', $_[0]);
 	};
 
-	# PG preprocessing code
+	# PG preprocessing code.
+	$evalString = &{ $self->{preprocess_code} }($evalString);
 	$evalString =
-		'BEGIN { my $eval = __FILE__; $main::envir{__files__}{$eval} = "'
+		'BEGIN { my $eval = __FILE__; $main::envir{loadMacrosCount} = '
+		. count_load_macros_calls($evalString)
+		. '; $main::envir{__files__}{$eval} = "'
 		. $self->{envir}{probFileName} . '" };'
-		. &{ $self->{preprocess_code} }($evalString);
+		. $evalString;
 
 	my ($PG_PROBLEM_TEXT_REF, $PG_HEADER_TEXT_REF, $PG_ANSWER_HASH_REF, $PG_FLAGS_REF, $PGcore) =
 		$safe_cmpt->reval($evalString);
@@ -1386,6 +1389,24 @@ sub default_preprocess_code {
 sub default_postprocess_code {
 	my $evalString_ref = shift;
 	return $evalString_ref;
+}
+
+=head2
+
+    count_load_macros_calls($problemSource);
+
+Counts the number of times C<loadMacros> is called in C<$problemSource>,
+by first removing all perl comments from the string, then counting the number
+of instances of the string "loadMacros". This is not foolproof, as there
+could be instances of the "loadMacros" string outside of comments that are
+not function calls, but this is very unlikely in a problem source.
+
+=cut
+
+sub count_load_macros_calls {
+	my $source = shift;
+	(my $codeOnly = $source) =~ s/(?<!\$)#.*$//mg;
+	return () = $codeOnly =~ /loadMacros\s*\(/g;
 }
 
 1;

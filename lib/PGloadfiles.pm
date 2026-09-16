@@ -21,10 +21,14 @@ sub new {
 	$pwd =~ s!/tmpEdit/!/!;
 
 	return bless {
-		envir         => $envir,
-		macroFileList => {},                     # List of compiled macros.
-		macrosPath    => $envir->{macrosPath},
-		pwd           => $pwd,                   # Directory containing the current problem.
+		envir          => $envir,
+		macroFileList  => {},                                # List of compiled macros.
+		macrosPath     => $envir->{macrosPath},
+		pwd            => $pwd,                              # Directory containing the current problem.
+		count          => 0,                                 # Number of times loadMacros has been called.
+		total          => $envir->{loadMacrosCount} // 0,    # Total number of loadMacros calls in problem source.
+		depth          => 0,                                 # Current recursion depth of a loadMacros call.
+		PGcourseLoaded => 0,
 	}, $class;
 }
 
@@ -36,13 +40,15 @@ sub loadMacros {
 	while (@files) {
 		my $fileName = shift @files;
 
-		next if $fileName =~ /^PG\.pl$/;         # The PG.pl macro package is already loaded.
+		next if $fileName =~ /^PG\.pl$/;    # The PG.pl macro package is already loaded.
 
 		# Only parse files with macro extensions.
 		unless ($fileName =~ /\.(pl|pg)$/) {
 			warn "Can't load file |$fileName|. Can't load a macro file unless it has a .pl or .pg extension";
 			next;
 		}
+
+		$self->{PGcourseLoaded} = 1 if $fileName eq 'PGcourse.pl';
 
 		# Remove the extension. Sometimes the extension is .pg
 		my $macro_file_name = $fileName =~ s/\.p[lg]//r;
@@ -57,6 +63,7 @@ sub loadMacros {
 			if $debugON;
 
 		unless ($macro_file_loaded) {
+			++$self->{depth};
 			warn "loadMacros: loading macro file $fileName" if $debugON;
 			my $filePath = $self->findMacroFile($fileName);
 			warn "loadMacros: look for $fileName at |$filePath|" if $debugON;
@@ -81,6 +88,15 @@ sub loadMacros {
 				warn "PGloadfiles:  $macro_file_name loaded, initializing $macro_file_name\n" if $debugON;
 				$init_subroutine->();
 			}
+			--$self->{depth};
+		}
+	}
+
+	# Load PGcourse.pl if it hasn't been loaded, and this is the final loadMacros call from the problem source.
+	if ($self->{depth} == 0 && !$self->{PGcourseLoaded}) {
+		if ($self->{count}++ == $self->{total}) {
+			warn "PGloadfiles: PGCourse.pl loaded." if $debugON;
+			$self->loadMacros('PGcourse.pl');
 		}
 	}
 
